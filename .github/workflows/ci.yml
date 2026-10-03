@@ -1,0 +1,50 @@
+name: CI Pipeline
+
+# 1. When should this run?
+on:
+  push:
+    branches: [ "main", "master" ]
+  pull_request:
+    branches: [ "main", "master" ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    # 2. Test across multiple Python versions in parallel!
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12", "3.13"]
+
+    steps:
+      # Step A: Download your repository onto the GitHub cloud machine
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      # Step B: Set up Python
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      # Step C: Install dependencies (pytest, ruff, mypy, redis-py)
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .[dev]
+
+      # Step D: Check code quality and style
+      - name: Lint and Format Check (Ruff)
+        run: |
+          ruff check .
+          ruff format --check .
+
+      # Step E: Verify strict type hints
+      - name: Type Check (Mypy)
+        run: |
+          mypy src/
+
+      # Step F: Run all unit and integration tests!
+      - name: Run Test Suite (Pytest)
+        run: |
+          pytest -v

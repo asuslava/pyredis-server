@@ -1,0 +1,2 @@
+[console_scripts]
+pyredis = pyredis.cli:main

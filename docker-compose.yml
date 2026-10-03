@@ -1,0 +1,13 @@
+services:
+  pyredis:
+    build: .
+    container_name: pyredis
+    ports:
+      - "6379:6379"
+    volumes:
+      - pyredis-data:/data
+    command: ["pyredis", "--host", "0.0.0.0", "--port", "6379", "--dir", "/data"]
+    restart: unless-stopped
+
+volumes:
+  pyredis-data:
