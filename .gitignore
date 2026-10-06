@@ -1,0 +1,35 @@
+# Python bytecode
+__pycache__/
+*.py[cod]
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Packaging / build output
+*.egg-info/
+build/
+dist/
+*.egg
+
+# Test, type-check and lint caches
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# IDE settings
+.idea/
+.vscode/
+
+# macOS
+.DS_Store
+
+# Project runtime data (AOF files created when you run the server)
+*.aof
+dump.*
+
+# Local environment files
+.env
