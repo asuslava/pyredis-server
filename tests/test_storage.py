@@ -1,116 +1,170 @@
-import time
-import pytest
-from pyredis.storage import Database
+from pyredis.storage import Database, ValueType
 
 
-@pytest.fixture
-def db():
-    """Provides a fresh Database instance for each test."""
-    return Database()
+class FakeClock:
+    def __init__(self, now: float = 0.0):
+        self.now = now
+
+    def __call__(self) -> float:
+        return self.now
 
 
-# --- set_string & get_string Tests ---
-
-def test_set_and_get_string(db):
-    db.set_string(b"key1", b"value1")
-    assert db.get_string(b"key1") == b"value1"
+def make_db(now: float = 0.0):
+    clock = FakeClock(now)
+    return Database(clock=clock), clock
 
 
-def test_get_nonexistent_key(db):
-    assert db.get_string(b"nonexistent") is None
+# ---------- exists ----------
+
+def test_exists_present_key():
+    db, _ = make_db()
+    db.set(b"k", b"v", ValueType.STRING)
+    assert db.exists(b"k") is True
 
 
-def test_overwrite_string_updates_value(db):
-    db.set_string(b"key1", b"value1")
-    db.set_string(b"key1", b"value2")
-    assert db.get_string(b"key1") == b"value2"
+def test_exists_missing_key():
+    db, _ = make_db()
+    assert db.exists(b"k") is False
 
 
-# --- Expiry & Lazy Deletion Tests ---
-
-def test_key_expires_after_ttl(db):
-    db.set_string(b"temp_key", b"temp_val")
-    # Manually set expiration to 0.1 seconds in the future
-    db._expiry[b"temp_key"] = time.time() + 0.1
-
-    # Key exists initially
-    assert db.get_string(b"temp_key") == b"temp_val"
-
-    # Wait for key to expire
-    time.sleep(0.15)
-
-    # Lazy deletion should trigger and return None
-    assert db.get_string(b"temp_key") is None
-    assert b"temp_key" not in db._data
-    assert b"temp_key" not in db._types
-    assert b"temp_key" not in db._expiry
+def test_exists_works_for_any_type():
+    db, _ = make_db()
+    db.set(b"l", [b"a"], ValueType.LIST)
+    db.set(b"s", {b"a"}, ValueType.SET)
+    assert db.exists(b"l") is True
+    assert db.exists(b"s") is True
 
 
-def test_overwriting_key_clears_expiry(db):
-    db.set_string(b"key1", b"val1")
-    db._expiry[b"key1"] = time.time() + 0.1  # set expiry
-
-    # Overwrite the key without setting an expiry
-    db.set_string(b"key1", b"val2")
-
-    # Ensure expiry was popped from internal dict
-    assert b"key1" not in db._expiry
-
-    # Wait past the original expiration time
-    time.sleep(0.15)
-
-    # Key should still exist because expiry was cleared
-    assert db.get_string(b"key1") == b"val2"
+def test_exists_expired_key_before_expiry():
+    db, clock = make_db(now=99.0)
+    db.set(b"k", b"v", ValueType.STRING)
+    db._entries[b"k"].expiry = 100.0
+    assert db.exists(b"k") is True
 
 
-# --- exists Tests ---
-
-def test_exists_returns_true_for_valid_key(db):
-    db.set_string(b"key1", b"val1")
-    assert db.exists(b"key1") is True
-
-
-def test_exists_returns_false_for_missing_key(db):
-    assert db.exists(b"missing") is False
+def test_exists_expired_key_at_expiry():
+    db, clock = make_db(now=100.0)
+    db.set(b"k", b"v", ValueType.STRING)
+    db._entries[b"k"].expiry = 100.0
+    assert db.exists(b"k") is False
+    assert b"k" not in db._entries
 
 
-def test_exists_returns_false_and_cleans_up_expired_key(db):
-    db.set_string(b"key1", b"val1")
-    db._expiry[b"key1"] = time.time() - 1.0  # Already expired
-
-    assert db.exists(b"key1") is False
-    assert b"key1" not in db._data
-
-
-# --- delete Tests ---
-
-def test_delete_single_key(db):
-    db.set_string(b"key1", b"val1")
-    deleted_count = db.delete(b"key1")
-
-    assert deleted_count == 1
-    assert db.get_string(b"key1") is None
-    assert db.exists(b"key1") is False
+def test_exists_expired_key_after_expiry():
+    db, clock = make_db(now=150.0)
+    db.set(b"k", b"v", ValueType.STRING)
+    db._entries[b"k"].expiry = 100.0
+    assert db.exists(b"k") is False
 
 
-def test_delete_multiple_keys(db):
-    db.set_string(b"k1", b"v1")
-    db.set_string(b"k2", b"v2")
-    db.set_string(b"k3", b"v3")
+# ---------- delete ----------
 
-    # Delete 2 existing keys and 1 non-existent key
-    deleted_count = db.delete(b"k1", b"k2", b"nonexistent")
-
-    assert deleted_count == 2
-    assert db.exists(b"k1") is False
-    assert db.exists(b"k2") is False
-    assert db.exists(b"k3") is True
+def test_delete_one_existing_key():
+    db, _ = make_db()
+    db.set(b"k", b"v", ValueType.STRING)
+    assert db.delete(b"k") == 1
+    assert db.get(b"k") is None
+    assert db.exists(b"k") is False
 
 
-def test_delete_expired_key_returns_zero(db):
-    db.set_string(b"expired_key", b"val")
-    db._expiry[b"expired_key"] = time.time() - 1.0  # Already expired
+def test_delete_missing_key():
+    db, _ = make_db()
+    assert db.delete(b"k") == 0
 
-    # Should clean up via _is_expired and not increment deleted_count
-    deleted_count = db.delete(b"expired_key")
-    assert deleted_count == 0
+
+def test_delete_no_keys():
+    db, _ = make_db()
+    assert db.delete() == 0
+
+
+def test_delete_several_keys_counts_only_existing():
+    db, _ = make_db()
+    db.set(b"a", b"1", ValueType.STRING)
+    db.set(b"b", b"2", ValueType.STRING)
+    assert db.delete(b"a", b"missing", b"b") == 2
+    assert db.exists(b"a") is False
+    assert db.exists(b"b") is False
+
+
+def test_delete_duplicate_keys_counts_once():
+    db, _ = make_db()
+    db.set(b"k", b"v", ValueType.STRING)
+    assert db.delete(b"k", b"k") == 1
+
+
+def test_delete_expired_key_is_not_counted():
+    db, clock = make_db(now=100.0)
+    db.set(b"k", b"v", ValueType.STRING)
+    db._entries[b"k"].expiry = 100.0
+    assert db.delete(b"k") == 0
+    assert b"k" not in db._entries
+
+
+def test_delete_works_for_any_type():
+    db, _ = make_db()
+    db.set(b"l", [b"a"], ValueType.LIST)
+    db.set(b"s", {b"a"}, ValueType.SET)
+    db.set(b"h", {b"f": b"v"}, ValueType.HASH)
+    assert db.delete(b"l", b"s", b"h") == 3
+
+
+def test_delete_leaves_other_keys_untouched():
+    db, _ = make_db()
+    db.set(b"a", b"1", ValueType.STRING)
+    db.set(b"b", b"2", ValueType.STRING)
+    db.delete(b"a")
+    assert db.get(b"b") == b"2"
+
+def test_keys_empty_database():
+    db, _ = make_db()
+    assert db.keys() == []
+
+
+def test_keys_returns_all_live_keys_of_any_type():
+    db, _ = make_db()
+    db.set(b"a", b"1", ValueType.STRING)
+    db.set(b"b", [b"x"], ValueType.LIST)
+    db.set(b"c", {b"x"}, ValueType.SET)
+    assert sorted(db.keys()) == [b"a", b"b", b"c"]
+
+
+def test_keys_skips_and_removes_expired():
+    db, clock = make_db(now=100.0)
+    db.set(b"live", b"1", ValueType.STRING)
+    db.set(b"dead", b"2", ValueType.STRING)
+    db._entries[b"dead"].expiry = 100.0
+    assert db.keys() == [b"live"]
+    assert b"dead" not in db._entries
+
+
+def test_keys_keeps_not_yet_expired():
+    db, clock = make_db(now=99.0)
+    db.set(b"k", b"v", ValueType.STRING)
+    db._entries[b"k"].expiry = 100.0
+    assert db.keys() == [b"k"]
+
+def test_type_of_each_type():
+    db, _ = make_db()
+    db.set(b"s", b"v", ValueType.STRING)
+    db.set(b"l", [b"a"], ValueType.LIST)
+    db.set(b"st", {b"a"}, ValueType.SET)
+    db.set(b"h", {b"f": b"v"}, ValueType.HASH)
+    db.set(b"z", {b"m": 1.0}, ValueType.ZSET)
+    assert db.type_of(b"s") == "string"
+    assert db.type_of(b"l") == "list"
+    assert db.type_of(b"st") == "set"
+    assert db.type_of(b"h") == "hash"
+    assert db.type_of(b"z") == "zset"
+
+
+def test_type_of_missing_key():
+    db, _ = make_db()
+    assert db.type_of(b"k") == "none"
+
+
+def test_type_of_expired_key():
+    db, clock = make_db(now=100.0)
+    db.set(b"k", b"v", ValueType.STRING)
+    db._entries[b"k"].expiry = 100.0
+    assert db.type_of(b"k") == "none"
+    assert b"k" not in db._entries

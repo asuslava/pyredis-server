@@ -1,52 +1,120 @@
 import time
+from collections.abc import Callable
+from dataclasses import dataclass
+from enum import Enum
+from typing import Any
+
+
+class ValueType(str, Enum):
+    STRING = "string"
+    LIST = "list"
+    SET = "set"
+    HASH = "hash"
+    ZSET = "zset"
+
+class WrongTypeError(Exception):
+    pass
+
+@dataclass(slots=True)
+class Entry:
+    value : Any
+    type : ValueType
+    expiry : float | None = None
 
 
 class Database:
-    def __init__(self):
-        self._data = {}
-        self._types = {}
-        self._expiry = {}
+    def __init__(self, clock: Callable[[], float] = time.time()) -> None:
+        self._entries : dict[bytes, Entry] = {}
+        self._clock = clock
 
-    def set_string(self, key: bytes, value: bytes) -> None:
-        self._data[key] = value
-        self._types[key] = "string"
-        self._expiry.pop(key, None)
+    def _live_entry(self, key: bytes) -> Entry | None:
+        entry = self._entries.get(key)
+        if entry is None:
+            return None
 
-    def get_string(self, key: bytes) -> bytes | None:
-        if self._is_expired(key):
+        if entry.expiry is not None and self._clock() >= entry.expiry:
+            self._entries.pop(key)
             return None
-        if key in self._data and self._types.get(key) != "string":
+
+        return entry
+
+    def get(self, key: bytes, expected_type: ValueType | None =None) -> Any | None:
+        entry = self._live_entry(key)
+        if entry is None:
             return None
-        return self._data.get(key)
+
+        if expected_type is not None and entry.type != expected_type:
+            raise WrongTypeError("WRONGTYPE Operation against a key holding "
+                                 "the wrong kind of value")
+
+        return entry.value
+
+    def set(self, key: bytes, value : Any, value_type: ValueType):
+        self._entries[key] = Entry(value, value_type)
+
+    def get_or_create(self, key: bytes, expected_type: ValueType, factory: Callable[[], Any]) -> Any:
+        value = self.get(key, expected_type)
+        if value is not None:
+            return value
+
+        # TODO : factory()
+        value = factory()
+        self.set(key, value, expected_type)
+        return value
 
     def exists(self, key: bytes) -> bool:
-        if self._is_expired(key):
-            return False
-        return key in self._data
+        if self._live_entry(key) is not None:
+            return True
+        return False
 
     def delete(self, *keys: bytes) -> int:
         count = 0
         for key in keys:
-            if key not in self._data:
-                continue
-            if self._is_expired(key):
-                continue
-            if self._delete_key(key):
+            entry = self._live_entry(key)
+            if entry is not None:
+                self._entries.pop(key)
                 count += 1
         return count
 
-    def _delete_key(self, key: bytes) -> bool:
-        existed = key in self._data
-        self._data.pop(key, None)
-        self._types.pop(key, None)
-        self._expiry.pop(key, None)
-        return existed
+    def type_of(self, key: bytes) -> str:
+        entry = self._live_entry(key)
+        if entry is None:
+            return "none"
+        return entry.type.value
 
-    def _is_expired(self, key: bytes) -> bool:
-        exp = self._expiry.get(key)
-        if exp is None:
+    def keys(self) -> list[bytes]:
+        res = []
+
+        for key in list(self._entries):
+            entry = self._live_entry(key)
+            if entry is not None:
+                res.append(key)
+        return res
+
+    def flush(self) -> None:
+        self._entries.clear()
+
+    def set_expiry(self, key: bytes, when: float) -> bool:
+        entry = self._live_entry(key)
+        if entry is None:
             return False
-        if time.time() >= exp:
-            self._delete_key(key)
-            return True
-        return False
+
+        entry.expiry = when
+        return True
+
+    def get_expiry(self, key: bytes) -> float | None:
+        entry = self._live_entry(key)
+        if entry is None:
+            return None
+        return entry.expiry
+
+    def persist(self, key: bytes) -> bool:
+        entry = self._live_entry(key)
+        if entry is None or entry.expiry is None:
+            return False
+
+        entry.expiry = None
+        return True
+
+    def now(self) -> float:
+        return self._clock()
