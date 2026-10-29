@@ -6,6 +6,7 @@ from pyredis.commands.strings import cmd_get, cmd_set
 from pyredis.commands.keys import cmd_del, cmd_exists, cmd_expire, cmd_ttl, cmd_persist
 from pyredis.commands.lists import cmd_lpush, cmd_rpush, cmd_lpop, cmd_rpop, cmd_llen, cmd_lrange
 from pyredis.commands.hashes import cmd_hset, cmd_hget, cmd_hdel, cmd_hexists, cmd_hlen, cmd_hgetall
+from pyredis.commands.sets import cmd_sadd, cmd_smembers, cmd_srem, cmd_sismember, cmd_scard
 from pyredis.storage import Database
 
 COMMANDS = {
@@ -29,6 +30,11 @@ COMMANDS = {
     b"HEXISTS": cmd_hexists,
     b"HLEN": cmd_hlen,
     b"HGETALL": cmd_hgetall,
+    b"SADD": cmd_sadd,
+    b"SMEMBERS": cmd_smembers,
+    b"SREM": cmd_srem,
+    b"SISMEMBER": cmd_sismember,
+    b"SCARD": cmd_scard,
 }
 
 def execute_command(db: Database, cmd_name: bytes, args: list[bytes]) -> Any:
