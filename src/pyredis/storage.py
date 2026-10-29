@@ -23,7 +23,7 @@ class Entry:
 
 
 class Database:
-    def __init__(self, clock: Callable[[], float] = time.time()) -> None:
+    def __init__(self, clock: Callable[[], float] = time.time) -> None:
         self._entries : dict[bytes, Entry] = {}
         self._clock = clock
 
@@ -57,7 +57,6 @@ class Database:
         if value is not None:
             return value
 
-        # TODO : factory()
         value = factory()
         self.set(key, value, expected_type)
         return value

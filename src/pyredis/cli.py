@@ -1,5 +1,6 @@
 import argparse
-
+import asyncio
+from pyredis.server import RedisServer
 
 def main() -> None:
     parser = argparse.ArgumentParser(
@@ -11,7 +12,15 @@ def main() -> None:
     parser.add_argument("--dir", default=".", help="directory for the AOF file")
     args = parser.parse_args()
 
+    server = RedisServer(host=args.host, port=args.port)
+    print(f"PyRedis running on {args.host}:{args.port}")
+
     print(f"pyredis would start on {args.host}:{args.port}, data dir: {args.dir}")
+
+    try:
+        asyncio.run(server.start())
+    except KeyboardInterrupt:
+        print("\nPyRedis shutting down...")
 
 
 if __name__ == "__main__":

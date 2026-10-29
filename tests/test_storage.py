@@ -1,4 +1,6 @@
-from pyredis.storage import Database, ValueType
+import pytest
+
+from pyredis.storage import Database, ValueType, WrongTypeError
 
 
 class FakeClock:
@@ -168,3 +170,62 @@ def test_type_of_expired_key():
     db._entries[b"k"].expiry = 100.0
     assert db.type_of(b"k") == "none"
     assert b"k" not in db._entries
+
+def test_get_or_create_creates_missing_key():
+    db, _ = make_db()
+    value = db.get_or_create(b"k", ValueType.LIST, list)
+    assert value == []
+    assert db.get(b"k") is value
+    assert db.type_of(b"k") == "list"
+
+
+def test_get_or_create_returns_existing_object():
+    db, _ = make_db()
+    first = db.get_or_create(b"k", ValueType.LIST, list)
+    first.append(b"a")
+    second = db.get_or_create(b"k", ValueType.LIST, list)
+    assert second is first
+    assert second == [b"a"]
+
+
+def test_get_or_create_does_not_call_factory_for_existing_key():
+    db, _ = make_db()
+    db.set(b"k", [b"a"], ValueType.LIST)
+
+    def boom():
+        raise AssertionError("factory must not be called")
+
+    assert db.get_or_create(b"k", ValueType.LIST, boom) == [b"a"]
+
+
+def test_get_or_create_wrong_type_raises_and_keeps_value():
+    db, _ = make_db()
+    db.set(b"k", b"v", ValueType.STRING)
+    with pytest.raises(WrongTypeError):
+        db.get_or_create(b"k", ValueType.LIST, list)
+    assert db.get(b"k") == b"v"
+
+
+def test_get_or_create_keeps_empty_existing_collection():
+    db, _ = make_db()
+    empty = []
+    db.set(b"k", empty, ValueType.LIST)
+    assert db.get_or_create(b"k", ValueType.LIST, list) is empty
+
+
+def test_get_or_create_expired_key_creates_fresh_value():
+    db, clock = make_db(now=0.0)
+    db.set(b"k", [b"old"], ValueType.LIST)
+    db.set_expiry(b"k", 100.0)
+    clock.now = 100.0
+    value = db.get_or_create(b"k", ValueType.LIST, list)
+    assert value == []
+    assert db._entries[b"k"].expiry is None
+
+
+def test_get_or_create_existing_key_keeps_expiry():
+    db, _ = make_db()
+    db.set(b"k", [b"a"], ValueType.LIST)
+    db.set_expiry(b"k", 100.0)
+    db.get_or_create(b"k", ValueType.LIST, list)
+    assert db._entries[b"k"].expiry == 100.0
