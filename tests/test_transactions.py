@@ -1,7 +1,9 @@
 """Integration tests for Redis Transactions (MULTI, EXEC, DISCARD)."""
 
 import asyncio
+
 import pytest
+
 from pyredis.protocol import parse, serialize
 from pyredis.server import RedisServer
 
@@ -24,7 +26,9 @@ async def server():
 
 
 async def send_cmd(reader, writer, cmd_name, *args):
-    payload = serialize([cmd_name.encode(), *[a.encode() if isinstance(a, str) else a for a in args]])
+    payload = serialize(
+        [cmd_name.encode(), *[a.encode() if isinstance(a, str) else a for a in args]]
+    )
     writer.write(payload)
     await writer.drain()
 

@@ -11,7 +11,10 @@ def cmd_publish(hub: PubSubHub, args: list[bytes]) -> int | ErrorReply:
     count = hub.publish(args[0], args[1])
     return count
 
-def cmd_subscribe(hub: PubSubHub, writer: asyncio.StreamWriter, args: list[bytes]) -> list[bytes] | ErrorReply:
+
+def cmd_subscribe(
+    hub: PubSubHub, writer: asyncio.StreamWriter, args: list[bytes]
+) -> list[bytes] | ErrorReply:
     if len(args) < 1:
         return ErrorReply("ERR wrong number of arguments for 'subscribe' command")
 
@@ -22,8 +25,13 @@ def cmd_subscribe(hub: PubSubHub, writer: asyncio.StreamWriter, args: list[bytes
 
     return replies
 
-def cmd_unsubscribe(hub: PubSubHub, writer: asyncio.StreamWriter, args: list[bytes]) -> list[bytes] | ErrorReply:
-    channels = list(args) if len(args) > 0 else list(hub._subscribers.get(writer, set()))
+
+def cmd_unsubscribe(
+    hub: PubSubHub, writer: asyncio.StreamWriter, args: list[bytes]
+) -> list[bytes] | ErrorReply:
+    channels = (
+        list(args) if len(args) > 0 else list(hub._subscribers.get(writer, set()))
+    )
 
     replies = []
     for channel in channels:

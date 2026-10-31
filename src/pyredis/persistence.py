@@ -1,17 +1,26 @@
 from pathlib import Path
 
 from pyredis.commands import execute_command
-from pyredis.protocol import serialize, parse, INCOMPLETE
+from pyredis.protocol import INCOMPLETE, parse, serialize
 from pyredis.storage import Database
 
 WRITE_COMMANDS = {
-    b"SET", b"DEL", b"EXPIRE", b"PERSIST",
-    b"LPUSH", b"RPUSH", b"LPOP", b"RPOP",
-    b"HSET", b"HDEL",
-    b"SADD", b"SREM",
+    b"SET",
+    b"DEL",
+    b"EXPIRE",
+    b"PERSIST",
+    b"LPUSH",
+    b"RPUSH",
+    b"LPOP",
+    b"RPOP",
+    b"HSET",
+    b"HDEL",
+    b"SADD",
+    b"SREM",
 }
 
-class AOFManager():
+
+class AOFManager:
     def __init__(self, filepath: str | Path):
         self.filepath = Path(filepath)
 
@@ -46,4 +55,3 @@ class AOFManager():
             replayed_count += 1
 
         return replayed_count
-

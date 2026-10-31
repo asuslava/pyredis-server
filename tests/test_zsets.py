@@ -8,7 +8,10 @@ from pyredis.storage import Database
 def test_zadd_and_zscore():
     db = Database()
     # Adding two members -> returns 2
-    assert execute_command(db, b"ZADD", [b"scores", b"100", b"Alice", b"85.5", b"Bob"]) == 2
+    assert (
+        execute_command(db, b"ZADD", [b"scores", b"100", b"Alice", b"85.5", b"Bob"])
+        == 2
+    )
 
     # Querying their scores
     assert execute_command(db, b"ZSCORE", [b"scores", b"Alice"]) == b"100"
@@ -83,9 +86,7 @@ def test_zrange_withscores():
     )
 
     # WITHSCORES returns alternating [member, score_bytes, ...]
-    assert execute_command(
-        db, b"ZRANGE", [b"rank", b"0", b"-1", b"WITHSCORES"]
-    ) == [
+    assert execute_command(db, b"ZRANGE", [b"rank", b"0", b"-1", b"WITHSCORES"]) == [
         b"player1",
         b"10.5",
         b"player2",
@@ -119,8 +120,12 @@ def test_zset_syntax_and_errors():
     # ZADD requires odd number of total args (key + at least 1 pair)
     assert isinstance(execute_command(db, b"ZADD", [b"z", b"10"]), ErrorReply)
     # ZADD with invalid float score
-    assert isinstance(execute_command(db, b"ZADD", [b"z", b"not_a_float", b"m"]), ErrorReply)
+    assert isinstance(
+        execute_command(db, b"ZADD", [b"z", b"not_a_float", b"m"]), ErrorReply
+    )
 
     # ZRANGE with invalid syntax or bad integers
-    assert isinstance(execute_command(db, b"ZRANGE", [b"z", b"0", b"1", b"BADOPTION"]), ErrorReply)
+    assert isinstance(
+        execute_command(db, b"ZRANGE", [b"z", b"0", b"1", b"BADOPTION"]), ErrorReply
+    )
     assert isinstance(execute_command(db, b"ZRANGE", [b"z", b"bad", b"1"]), ErrorReply)

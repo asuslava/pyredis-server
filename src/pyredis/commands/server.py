@@ -1,6 +1,6 @@
 from typing import Any
 
-from pyredis.protocol import SimpleString, ErrorReply
+from pyredis.protocol import ErrorReply, SimpleString
 from pyredis.storage import Database
 
 

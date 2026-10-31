@@ -13,19 +13,21 @@ class ValueType(str, Enum):
     HASH = "hash"
     ZSET = "zset"
 
+
 class WrongTypeError(Exception):
     pass
 
+
 @dataclass(slots=True)
 class Entry:
-    value : Any
-    type : ValueType
-    expiry : float | None = None
+    value: Any
+    type: ValueType
+    expiry: float | None = None
 
 
 class Database:
     def __init__(self, clock: Callable[[], float] = time.time) -> None:
-        self._entries : dict[bytes, Entry] = {}
+        self._entries: dict[bytes, Entry] = {}
         self._clock = clock
 
     def _live_entry(self, key: bytes) -> Entry | None:
@@ -39,21 +41,26 @@ class Database:
 
         return entry
 
-    def get(self, key: bytes, expected_type: ValueType | None =None) -> Any | None:
+    def get(self, key: bytes, expected_type: ValueType | None = None) -> Any | None:
         entry = self._live_entry(key)
         if entry is None:
             return None
 
         if expected_type is not None and entry.type != expected_type:
-            raise WrongTypeError("WRONGTYPE Operation against a key holding "
-                                 "the wrong kind of value")
+            raise WrongTypeError(
+                "WRONGTYPE Operation against a key holding the wrong kind of value"
+            )
 
         return entry.value
 
-    def set(self, key: bytes, value : Any, value_type: ValueType, expiry: float | None = None):
+    def set(
+        self, key: bytes, value: Any, value_type: ValueType, expiry: float | None = None
+    ):
         self._entries[key] = Entry(value, value_type, expiry)
 
-    def get_or_create(self, key: bytes, expected_type: ValueType, factory: Callable[[], Any]) -> Any:
+    def get_or_create(
+        self, key: bytes, expected_type: ValueType, factory: Callable[[], Any]
+    ) -> Any:
         value = self.get(key, expected_type)
         if value is not None:
             return value
@@ -63,9 +70,7 @@ class Database:
         return value
 
     def exists(self, key: bytes) -> bool:
-        if self._live_entry(key) is not None:
-            return True
-        return False
+        return self._live_entry(key) is not None
 
     def delete(self, *keys: bytes) -> int:
         count = 0
@@ -121,8 +126,7 @@ class Database:
 
     def active_expire_cycle(self, sample_size: int = 20) -> tuple[int, int]:
         expiring_keys = [
-            key for key, entry in self._entries.items()
-            if entry.expiry is not None
+            key for key, entry in self._entries.items() if entry.expiry is not None
         ]
 
         if not expiring_keys:

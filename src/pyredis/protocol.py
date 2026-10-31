@@ -1,17 +1,17 @@
 from dataclasses import dataclass
 from typing import Any
 
-
 # Limits
-MAX_LINE_LENGTH = 64 * 1024          # - longest allowed simple line
+MAX_LINE_LENGTH = 64 * 1024  # - longest allowed simple line
 MAX_BULK_LENGTH = 512 * 1024 * 1024  # - e.g. 512 MB, like real Redis
-MAX_ARRAY_LENGTH = 1024 * 1024       # - max elements in array
-MAX_NESTING_DEPTH = 32               # - protects recursion from deeply nested arrays
+MAX_ARRAY_LENGTH = 1024 * 1024  # - max elements in array
+MAX_NESTING_DEPTH = 32  # - protects recursion from deeply nested arrays
 
 
 # Exceptions
 class RESPError(Exception):
     pass
+
 
 class ProtocolError(RESPError):
     pass
@@ -20,17 +20,20 @@ class ProtocolError(RESPError):
 # Types
 @dataclass(frozen=True, slots=True)
 class SimpleString:
-    value : str
+    value: str
+
 
 @dataclass(frozen=True, slots=True)
 class ErrorReply:
-    message : str
+    message: str
+
 
 class NullArray:
     __slots__ = ()
 
     def __repr__(self) -> str:
         return "NullArray"
+
 
 NULL_ARRAY = NullArray()
 
@@ -42,6 +45,7 @@ class Incomplete:
     def __repr__(self) -> str:
         return "INCOMPLETE"
 
+
 INCOMPLETE = Incomplete()
 ParseResult = tuple[Any, int] | Incomplete
 
@@ -50,6 +54,7 @@ ParseResult = tuple[Any, int] | Incomplete
 def _check_line_safe(text: str) -> None:
     if "\r" in text or "\n" in text:
         raise RESPError(f"Data must not contain CR or LF: {text!r}")
+
 
 def serialize(data: Any) -> bytes:
 
@@ -64,11 +69,11 @@ def serialize(data: Any) -> bytes:
 
     if isinstance(data, SimpleString):
         _check_line_safe(data.value)
-        return f"+{data.value}\r\n".encode("utf-8")
+        return f"+{data.value}\r\n".encode()
 
     if isinstance(data, ErrorReply):
         _check_line_safe(data.message)
-        return f"-{data.message}\r\n".encode("utf-8")
+        return f"-{data.message}\r\n".encode()
 
     if isinstance(data, int):
         return f":{data}\r\n".encode("ascii")
@@ -103,7 +108,8 @@ def _read_line(buffer: bytes, pos: int) -> tuple[bytes, int] | Incomplete:
     if ending - pos > MAX_LINE_LENGTH:
         raise ProtocolError("Line exceeds MAX_LINE_LENGTH")
 
-    return (buffer[pos:ending], ending+2)
+    return (buffer[pos:ending], ending + 2)
+
 
 def _parse_int(line: bytes) -> int:
     negative = False
@@ -120,6 +126,7 @@ def _parse_int(line: bytes) -> int:
 
     return -value if negative else value
 
+
 def _parse_simple_string(buffer: bytes, pos: int, depth: int) -> ParseResult:
     result = _read_line(buffer, pos)
 
@@ -134,6 +141,7 @@ def _parse_simple_string(buffer: bytes, pos: int, depth: int) -> ParseResult:
         raise ProtocolError("Invalid UTF-8 in simple string") from exc
 
     return (SimpleString(text), new_pos)
+
 
 def _parse_error(buffer: bytes, pos: int, depth: int) -> ParseResult:
     result = _read_line(buffer, pos)
@@ -150,6 +158,7 @@ def _parse_error(buffer: bytes, pos: int, depth: int) -> ParseResult:
 
     return (ErrorReply(text), new_pos)
 
+
 def _parse_integer(buffer: bytes, pos: int, depth: int) -> ParseResult:
     result = _read_line(buffer, pos)
 
@@ -160,6 +169,7 @@ def _parse_integer(buffer: bytes, pos: int, depth: int) -> ParseResult:
     value = _parse_int(line)
 
     return (value, new_pos)
+
 
 def _parse_bulk_string(buffer: bytes, pos: int, depth: int) -> ParseResult:
     result = _read_line(buffer, pos)
@@ -179,10 +189,11 @@ def _parse_bulk_string(buffer: bytes, pos: int, depth: int) -> ParseResult:
     if len(buffer) < end + 2:
         return INCOMPLETE
 
-    if buffer[end:end+2] != b"\r\n":
+    if buffer[end : end + 2] != b"\r\n":
         raise ProtocolError("Bulk string not terminated by CRLF")
 
-    return (buffer[new_pos:end], end+2)
+    return (buffer[new_pos:end], end + 2)
+
 
 def _parse_array(buffer: bytes, pos: int, depth: int) -> ParseResult:
     result = _read_line(buffer, pos)
@@ -202,7 +213,7 @@ def _parse_array(buffer: bytes, pos: int, depth: int) -> ParseResult:
     cur = new_pos
 
     for _ in range(count):
-        element = _parse_value(buffer, cur, depth+1)
+        element = _parse_value(buffer, cur, depth + 1)
         if element is INCOMPLETE:
             return INCOMPLETE
 
@@ -210,6 +221,7 @@ def _parse_array(buffer: bytes, pos: int, depth: int) -> ParseResult:
         items.append(item)
 
     return (items, cur)
+
 
 # Dispatcher
 def _parse_value(buffer: bytes, pos: int, depth: int) -> ParseResult:
@@ -219,20 +231,21 @@ def _parse_value(buffer: bytes, pos: int, depth: int) -> ParseResult:
     if pos >= len(buffer):
         return INCOMPLETE
 
-    type_byte = buffer[pos:pos+1]
+    type_byte = buffer[pos : pos + 1]
     if type_byte == b"+":
-        return _parse_simple_string(buffer, pos+1, depth)
+        return _parse_simple_string(buffer, pos + 1, depth)
     elif type_byte == b"-":
-        return _parse_error(buffer, pos+1, depth)
+        return _parse_error(buffer, pos + 1, depth)
     elif type_byte == b":":
-        return _parse_integer(buffer, pos+1, depth)
+        return _parse_integer(buffer, pos + 1, depth)
     elif type_byte == b"$":
-        return _parse_bulk_string(buffer, pos+1, depth)
+        return _parse_bulk_string(buffer, pos + 1, depth)
     elif type_byte == b"*":
-        return _parse_array(buffer, pos+1, depth)
+        return _parse_array(buffer, pos + 1, depth)
     else:
         raise ProtocolError(f"Unknown type byte: {type_byte!r}")
 
-def parse(buffer: bytes, pos: int=0) -> ParseResult:
+
+def parse(buffer: bytes, pos: int = 0) -> ParseResult:
     """Returns (value, new_pos) or INCOMPLETE, raises ProtocolError"""
     return _parse_value(buffer, pos, 0)

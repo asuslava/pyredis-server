@@ -2,17 +2,23 @@ import asyncio
 
 from pyredis.commands import execute_command
 from pyredis.commands.pubsub import cmd_publish, cmd_subscribe, cmd_unsubscribe
-from pyredis.commands.transactions import cmd_multi, cmd_discard, cmd_exec
+from pyredis.commands.transactions import cmd_discard, cmd_exec, cmd_multi
 from pyredis.context import ClientContext
 from pyredis.expiration import active_expiration_loop
 from pyredis.persistence import AOFManager
+from pyredis.protocol import INCOMPLETE, ErrorReply, SimpleString, parse, serialize
 from pyredis.pubsub import PubSubHub
 from pyredis.storage import Database
-from pyredis.protocol import parse, INCOMPLETE, serialize, SimpleString, ErrorReply
 
 
 class RedisServer:
-    def __init__(self, db: Database | None = None, host: str = "127.0.0.1", port: int = 6379, aof: AOFManager | None = None):
+    def __init__(
+        self,
+        db: Database | None = None,
+        host: str = "127.0.0.1",
+        port: int = 6379,
+        aof: AOFManager | None = None,
+    ):
         self.db = db if db is not None else Database()
         self.host = host
         self.port = port
@@ -28,7 +34,9 @@ class RedisServer:
                 print(f"Loaded {count} commands from AOF")
 
         expire_task = asyncio.create_task(active_expiration_loop(self.db))
-        self._server = await asyncio.start_server(self._handle_client, self.host, self.port)
+        self._server = await asyncio.start_server(
+            self._handle_client, self.host, self.port
+        )
 
         try:
             async with self._server:
@@ -37,7 +45,9 @@ class RedisServer:
             expire_task.cancel()
             await asyncio.gather(expire_task, return_exceptions=True)
 
-    async def _handle_client(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
+    async def _handle_client(
+        self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter
+    ) -> None:
         buffer = bytearray()
         context = ClientContext()
         try:
@@ -107,4 +117,3 @@ class RedisServer:
             self.hub.unsubscribe_all(writer)
             writer.close()
             await writer.wait_closed()
-

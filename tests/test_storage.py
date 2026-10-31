@@ -18,6 +18,7 @@ def make_db(now: float = 0.0):
 
 # ---------- exists ----------
 
+
 def test_exists_present_key():
     db, _ = make_db()
     db.set(b"k", b"v", ValueType.STRING)
@@ -38,14 +39,14 @@ def test_exists_works_for_any_type():
 
 
 def test_exists_expired_key_before_expiry():
-    db, clock = make_db(now=99.0)
+    db, _clock = make_db(now=99.0)
     db.set(b"k", b"v", ValueType.STRING)
     db._entries[b"k"].expiry = 100.0
     assert db.exists(b"k") is True
 
 
 def test_exists_expired_key_at_expiry():
-    db, clock = make_db(now=100.0)
+    db, _clock = make_db(now=100.0)
     db.set(b"k", b"v", ValueType.STRING)
     db._entries[b"k"].expiry = 100.0
     assert db.exists(b"k") is False
@@ -53,13 +54,14 @@ def test_exists_expired_key_at_expiry():
 
 
 def test_exists_expired_key_after_expiry():
-    db, clock = make_db(now=150.0)
+    db, _clock = make_db(now=150.0)
     db.set(b"k", b"v", ValueType.STRING)
     db._entries[b"k"].expiry = 100.0
     assert db.exists(b"k") is False
 
 
 # ---------- delete ----------
+
 
 def test_delete_one_existing_key():
     db, _ = make_db()
@@ -95,7 +97,7 @@ def test_delete_duplicate_keys_counts_once():
 
 
 def test_delete_expired_key_is_not_counted():
-    db, clock = make_db(now=100.0)
+    db, _clock = make_db(now=100.0)
     db.set(b"k", b"v", ValueType.STRING)
     db._entries[b"k"].expiry = 100.0
     assert db.delete(b"k") == 0
@@ -117,6 +119,7 @@ def test_delete_leaves_other_keys_untouched():
     db.delete(b"a")
     assert db.get(b"b") == b"2"
 
+
 def test_keys_empty_database():
     db, _ = make_db()
     assert db.keys() == []
@@ -131,7 +134,7 @@ def test_keys_returns_all_live_keys_of_any_type():
 
 
 def test_keys_skips_and_removes_expired():
-    db, clock = make_db(now=100.0)
+    db, _clock = make_db(now=100.0)
     db.set(b"live", b"1", ValueType.STRING)
     db.set(b"dead", b"2", ValueType.STRING)
     db._entries[b"dead"].expiry = 100.0
@@ -140,10 +143,11 @@ def test_keys_skips_and_removes_expired():
 
 
 def test_keys_keeps_not_yet_expired():
-    db, clock = make_db(now=99.0)
+    db, _clock = make_db(now=99.0)
     db.set(b"k", b"v", ValueType.STRING)
     db._entries[b"k"].expiry = 100.0
     assert db.keys() == [b"k"]
+
 
 def test_type_of_each_type():
     db, _ = make_db()
@@ -165,11 +169,12 @@ def test_type_of_missing_key():
 
 
 def test_type_of_expired_key():
-    db, clock = make_db(now=100.0)
+    db, _clock = make_db(now=100.0)
     db.set(b"k", b"v", ValueType.STRING)
     db._entries[b"k"].expiry = 100.0
     assert db.type_of(b"k") == "none"
     assert b"k" not in db._entries
+
 
 def test_get_or_create_creates_missing_key():
     db, _ = make_db()

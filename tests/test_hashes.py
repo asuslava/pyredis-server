@@ -8,7 +8,9 @@ from pyredis.storage import Database
 def test_hset_and_hget():
     db = Database()
     # Inserting 2 new fields -> returns 2
-    assert execute_command(db, b"HSET", [b"user:1", b"name", b"Alice", b"age", b"30"]) == 2
+    assert (
+        execute_command(db, b"HSET", [b"user:1", b"name", b"Alice", b"age", b"30"]) == 2
+    )
 
     # Reading them back
     assert execute_command(db, b"HGET", [b"user:1", b"name"]) == b"Alice"
@@ -86,7 +88,9 @@ def test_hash_argument_errors():
     db = Database()
     # HSET requires odd number of total args (key + at least 1 pair)
     assert isinstance(execute_command(db, b"HSET", [b"h", b"f1"]), ErrorReply)
-    assert isinstance(execute_command(db, b"HSET", [b"h", b"f1", b"v1", b"f2"]), ErrorReply)
+    assert isinstance(
+        execute_command(db, b"HSET", [b"h", b"f1", b"v1", b"f2"]), ErrorReply
+    )
 
     # Wrong arg counts
     assert isinstance(execute_command(db, b"HGET", [b"h"]), ErrorReply)

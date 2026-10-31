@@ -3,6 +3,7 @@ import socket
 import statistics
 import time
 from concurrent.futures import ThreadPoolExecutor
+
 from pyredis.protocol import serialize
 
 
@@ -28,23 +29,30 @@ def worker_task(host: str, port: int, commands: list[bytes]) -> list[float]:
     return latencies
 
 
-def benchmark_command(name: str, raw_commands: list[list[bytes]], host: str = "127.0.0.1", port: int = 6379, concurrency: int = 20) -> None:
+def benchmark_command(
+    name: str,
+    raw_commands: list[list[bytes]],
+    host: str = "127.0.0.1",
+    port: int = 6379,
+    concurrency: int = 20,
+) -> None:
     serialized = [serialize(cmd) for cmd in raw_commands]
     total_requests = len(serialized)
 
     batch_size = (total_requests + concurrency - 1) // concurrency
-    batches = [serialized[i : i + batch_size] for i in range(0, total_requests, batch_size)]
+    batches = [
+        serialized[i : i + batch_size] for i in range(0, total_requests, batch_size)
+    ]
 
-    print(f"\nRunning benchmark: {name} ({total_requests:,} requests, {concurrency} clients)...")
+    print(
+        f"\nRunning benchmark: {name} ({total_requests:,} requests, {concurrency} clients)..."
+    )
 
     start_time = time.perf_counter()
 
     latencies = []
     with ThreadPoolExecutor(max_workers=concurrency) as executor:
-        futures = [
-            executor.submit(worker_task, host, port, batch)
-            for batch in batches
-        ]
+        futures = [executor.submit(worker_task, host, port, batch) for batch in batches]
         for f in futures:
             latencies.extend(f.result())
 
@@ -78,8 +86,12 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="PyRedis Benchmark Tool")
     parser.add_argument("--host", default="127.0.0.1", help="Server host")
     parser.add_argument("--port", type=int, default=6379, help="Server port")
-    parser.add_argument("-n", "--requests", type=int, default=5000, help="Total requests per test")
-    parser.add_argument("-c", "--concurrency", type=int, default=20, help="Parallel client connections")
+    parser.add_argument(
+        "-n", "--requests", type=int, default=5000, help="Total requests per test"
+    )
+    parser.add_argument(
+        "-c", "--concurrency", type=int, default=20, help="Parallel client connections"
+    )
     args = parser.parse_args()
 
     n = args.requests

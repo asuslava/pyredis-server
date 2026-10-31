@@ -1,5 +1,3 @@
-from typing import Any
-
 from pyredis.protocol import ErrorReply
 from pyredis.storage import Database, ValueType, WrongTypeError
 
@@ -9,9 +7,13 @@ def cmd_hset(db: Database, args: list[bytes]) -> int | ErrorReply:
         return ErrorReply("ERR wrong number of arguments for 'hset' command")
 
     try:
-        items = db.get_or_create(key=args[0], expected_type=ValueType.HASH, factory=dict)
+        items = db.get_or_create(
+            key=args[0], expected_type=ValueType.HASH, factory=dict
+        )
     except WrongTypeError:
-        return ErrorReply("WRONGTYPE Operation against a key holding the wrong kind of value")
+        return ErrorReply(
+            "WRONGTYPE Operation against a key holding the wrong kind of value"
+        )
 
     added_count = 0
     for i in range(1, len(args), 2):
@@ -23,6 +25,7 @@ def cmd_hset(db: Database, args: list[bytes]) -> int | ErrorReply:
 
     return added_count
 
+
 def cmd_hget(db: Database, args: list[bytes]) -> bytes | ErrorReply:
     if len(args) != 2:
         return ErrorReply("ERR wrong number of arguments for 'hget' command")
@@ -30,12 +33,15 @@ def cmd_hget(db: Database, args: list[bytes]) -> bytes | ErrorReply:
     try:
         items = db.get(key=args[0], expected_type=ValueType.HASH)
     except WrongTypeError:
-        return ErrorReply("WRONGTYPE Operation against a key holding the wrong kind of value")
+        return ErrorReply(
+            "WRONGTYPE Operation against a key holding the wrong kind of value"
+        )
 
     if items is None:
         return None
 
     return items.get(args[1])
+
 
 def cmd_hdel(db: Database, args: list[bytes]) -> int | ErrorReply:
     if len(args) < 2:
@@ -44,7 +50,9 @@ def cmd_hdel(db: Database, args: list[bytes]) -> int | ErrorReply:
     try:
         items = db.get(key=args[0], expected_type=ValueType.HASH)
     except WrongTypeError:
-        return ErrorReply("WRONGTYPE Operation against a key holding the wrong kind of value")
+        return ErrorReply(
+            "WRONGTYPE Operation against a key holding the wrong kind of value"
+        )
 
     if items is None:
         return 0
@@ -59,6 +67,7 @@ def cmd_hdel(db: Database, args: list[bytes]) -> int | ErrorReply:
 
     return deleted_count
 
+
 def cmd_hexists(db: Database, args: list[bytes]) -> int | ErrorReply:
     if len(args) < 2:
         return ErrorReply("ERR wrong number of arguments for 'hexists' command")
@@ -66,12 +75,15 @@ def cmd_hexists(db: Database, args: list[bytes]) -> int | ErrorReply:
     try:
         items = db.get(key=args[0], expected_type=ValueType.HASH)
     except WrongTypeError:
-        return ErrorReply("WRONGTYPE Operation against a key holding the wrong kind of value")
+        return ErrorReply(
+            "WRONGTYPE Operation against a key holding the wrong kind of value"
+        )
 
     if items is None:
         return 0
 
     return 1 if args[1] in items else 0
+
 
 def cmd_hlen(db: Database, args: list[bytes]) -> int | ErrorReply:
     if len(args) != 1:
@@ -80,9 +92,12 @@ def cmd_hlen(db: Database, args: list[bytes]) -> int | ErrorReply:
     try:
         items = db.get(key=args[0], expected_type=ValueType.HASH)
     except WrongTypeError:
-        return ErrorReply("WRONGTYPE Operation against a key holding the wrong kind of value")
+        return ErrorReply(
+            "WRONGTYPE Operation against a key holding the wrong kind of value"
+        )
 
     return len(items) if items is not None else 0
+
 
 def cmd_hgetall(db: Database, args: list[bytes]) -> list | ErrorReply:
     if len(args) != 1:
@@ -91,7 +106,9 @@ def cmd_hgetall(db: Database, args: list[bytes]) -> list | ErrorReply:
     try:
         items = db.get(key=args[0], expected_type=ValueType.HASH)
     except WrongTypeError:
-        return ErrorReply("WRONGTYPE Operation against a key holding the wrong kind of value")
+        return ErrorReply(
+            "WRONGTYPE Operation against a key holding the wrong kind of value"
+        )
 
     if items is None:
         return []

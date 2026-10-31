@@ -5,6 +5,7 @@ import os
 from pyredis.persistence import AOFManager
 from pyredis.server import RedisServer
 
+
 def main() -> None:
     parser = argparse.ArgumentParser(
         prog="pyredis",

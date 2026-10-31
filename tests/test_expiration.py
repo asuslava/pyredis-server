@@ -1,7 +1,9 @@
 """Tests for active key expiration."""
 
 import asyncio
+
 import pytest
+
 from pyredis.expiration import active_expiration_loop
 from pyredis.storage import Database, ValueType
 

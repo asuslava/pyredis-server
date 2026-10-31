@@ -1,8 +1,8 @@
+from collections import deque
 from typing import Any
 
 from pyredis.protocol import ErrorReply
 from pyredis.storage import Database, ValueType, WrongTypeError
-from collections import deque
 
 
 def cmd_lpush(db: Database, args: list[bytes]) -> int | ErrorReply:
@@ -10,28 +10,38 @@ def cmd_lpush(db: Database, args: list[bytes]) -> int | ErrorReply:
         return ErrorReply("ERR wrong number of arguments for 'lpush' command")
 
     try:
-        items = db.get_or_create(key=args[0], expected_type=ValueType.LIST, factory=deque)
+        items = db.get_or_create(
+            key=args[0], expected_type=ValueType.LIST, factory=deque
+        )
     except WrongTypeError:
-        return ErrorReply("WRONGTYPE Operation against a key holding the wrong kind of value")
+        return ErrorReply(
+            "WRONGTYPE Operation against a key holding the wrong kind of value"
+        )
 
     for i in args[1:]:
         items.appendleft(i)
 
     return len(items)
 
+
 def cmd_rpush(db: Database, args: list[bytes]) -> int | ErrorReply:
     if len(args) < 2:
         return ErrorReply("ERR wrong number of arguments for 'rpush' command")
 
     try:
-        items = db.get_or_create(key=args[0], expected_type=ValueType.LIST, factory=deque)
+        items = db.get_or_create(
+            key=args[0], expected_type=ValueType.LIST, factory=deque
+        )
     except WrongTypeError:
-        return ErrorReply("WRONGTYPE Operation against a key holding the wrong kind of value")
+        return ErrorReply(
+            "WRONGTYPE Operation against a key holding the wrong kind of value"
+        )
 
     for i in args[1:]:
         items.append(i)
 
     return len(items)
+
 
 def cmd_lpop(db: Database, args: list[bytes]) -> Any:
     if len(args) < 1:
@@ -40,7 +50,9 @@ def cmd_lpop(db: Database, args: list[bytes]) -> Any:
     try:
         items = db.get(key=args[0], expected_type=ValueType.LIST)
     except WrongTypeError:
-        return ErrorReply("WRONGTYPE Operation against a key holding the wrong kind of value")
+        return ErrorReply(
+            "WRONGTYPE Operation against a key holding the wrong kind of value"
+        )
 
     if items is None or len(items) == 0:
         return None
@@ -52,6 +64,7 @@ def cmd_lpop(db: Database, args: list[bytes]) -> Any:
 
     return val
 
+
 def cmd_rpop(db: Database, args: list[bytes]) -> Any:
     if len(args) < 1:
         return ErrorReply("ERR wrong number of arguments for 'rpop' command")
@@ -59,7 +72,9 @@ def cmd_rpop(db: Database, args: list[bytes]) -> Any:
     try:
         items = db.get(key=args[0], expected_type=ValueType.LIST)
     except WrongTypeError:
-        return ErrorReply("WRONGTYPE Operation against a key holding the wrong kind of value")
+        return ErrorReply(
+            "WRONGTYPE Operation against a key holding the wrong kind of value"
+        )
 
     if items is None or len(items) == 0:
         return None
@@ -71,6 +86,7 @@ def cmd_rpop(db: Database, args: list[bytes]) -> Any:
 
     return val
 
+
 def cmd_llen(db: Database, args: list[bytes]) -> int | ErrorReply | None:
     if len(args) != 1:
         return ErrorReply("ERR wrong number of arguments for 'llen' command")
@@ -78,12 +94,15 @@ def cmd_llen(db: Database, args: list[bytes]) -> int | ErrorReply | None:
     try:
         items = db.get(key=args[0], expected_type=ValueType.LIST)
     except WrongTypeError:
-        return ErrorReply("WRONGTYPE Operation against a key holding the wrong kind of value")
+        return ErrorReply(
+            "WRONGTYPE Operation against a key holding the wrong kind of value"
+        )
 
     if items is None:
         return 0
 
     return len(items)
+
 
 def cmd_lrange(db: Database, args: list[bytes]) -> Any:
     if len(args) != 3:
@@ -98,7 +117,9 @@ def cmd_lrange(db: Database, args: list[bytes]) -> Any:
     try:
         items = db.get(key=args[0], expected_type=ValueType.LIST)
     except WrongTypeError:
-        return ErrorReply("WRONGTYPE Operation against a key holding the wrong kind of value")
+        return ErrorReply(
+            "WRONGTYPE Operation against a key holding the wrong kind of value"
+        )
 
     if items is None:
         return []
@@ -112,5 +133,4 @@ def cmd_lrange(db: Database, args: list[bytes]) -> Any:
     if start >= len(elements) or start > end:
         return []
 
-    return elements[start:min(end+1, len(elements))]
-
+    return elements[start : min(end + 1, len(elements))]

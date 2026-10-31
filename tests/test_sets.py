@@ -84,4 +84,6 @@ def test_set_argument_errors():
     # Extra args
     assert isinstance(execute_command(db, b"SMEMBERS", [b"s", b"extra"]), ErrorReply)
     assert isinstance(execute_command(db, b"SCARD", [b"s", b"extra"]), ErrorReply)
-    assert isinstance(execute_command(db, b"SISMEMBER", [b"s", b"m", b"extra"]), ErrorReply)
+    assert isinstance(
+        execute_command(db, b"SISMEMBER", [b"s", b"m", b"extra"]), ErrorReply
+    )

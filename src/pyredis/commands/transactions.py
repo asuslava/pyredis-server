@@ -17,6 +17,7 @@ def cmd_multi(context: ClientContext, args: list[bytes]) -> Any:
 
     return SimpleString("OK")
 
+
 def cmd_discard(context: ClientContext, args: list[bytes]) -> Any:
     if len(args) != 0:
         return ErrorReply("ERR wrong number of arguments for 'discard' command")
@@ -25,6 +26,7 @@ def cmd_discard(context: ClientContext, args: list[bytes]) -> Any:
 
     context.reset_multi()
     return SimpleString("OK")
+
 
 def cmd_exec(db: Database, context: ClientContext, aof: Any, args: list[bytes]) -> Any:
     if len(args) != 0:
@@ -45,4 +47,3 @@ def cmd_exec(db: Database, context: ClientContext, aof: Any, args: list[bytes]) 
         results.append(res)
 
     return results
-

@@ -1,6 +1,7 @@
 """Tests for the commands package and execute_command router."""
 
 import pytest
+
 from pyredis.commands import execute_command
 from pyredis.protocol import ErrorReply, SimpleString
 from pyredis.storage import Database, ValueType

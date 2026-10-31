@@ -8,12 +8,12 @@ from pyredis.protocol import (
     NULL_ARRAY,
     ErrorReply,
     ProtocolError,
+    RESPError,
     SimpleString,
     _parse_int,
     _read_line,
     parse,
     serialize,
-    RESPError
 )
 
 
@@ -21,72 +21,87 @@ from pyredis.protocol import (
 def test_simple_string():
     assert serialize(SimpleString("OK")) == b"+OK\r\n"
 
+
 def test_error_reply():
     assert serialize(ErrorReply("ERR bad")) == b"-ERR bad\r\n"
+
 
 def test_int():
     assert serialize(5) == b":5\r\n"
 
+
 def test_str():
     assert serialize("hi") == b"$2\r\nhi\r\n"
+
 
 def test_bytes():
     assert serialize(b"hi") == b"$2\r\nhi\r\n"
 
+
 def test_null_str():
     assert serialize("") == b"$0\r\n\r\n"
 
+
 def test_none():
     assert serialize(None) == b"$-1\r\n"
+
 
 def test_null_array():
     assert serialize(NULL_ARRAY) == b"*-1\r\n"
 
 
-#Group 2: Arrays
+# Group 2: Arrays
 def test_empty_list():
     assert serialize([]) == b"*0\r\n"
+
 
 def test_list():
     assert serialize([1, 2]) == b"*2\r\n:1\r\n:2\r\n"
 
+
 def test_list_with_none():
     assert serialize(["a", None]) == b"*2\r\n$1\r\na\r\n$-1\r\n"
+
 
 def test_nested_lists():
     assert serialize([1, [b"a", None]]) == b"*2\r\n:1\r\n*2\r\n$1\r\na\r\n$-1\r\n"
 
 
-#Group 3: Byte Length
+# Group 3: Byte Length
 def test_length():
-    assert serialize("привет") == b"$12\r\n" + "привет".encode("utf-8") + b"\r\n"
+    assert serialize("привет") == b"$12\r\n" + "привет".encode() + b"\r\n"
     assert len("привет") == 6
-    assert len("привет".encode("utf-8")) == 12
+    assert len("привет".encode()) == 12
 
 
-#Group 4: Raise Error
+# Group 4: Raise Error
 def test_bool():
     with pytest.raises(RESPError):
         serialize(True)
+
 
 def test_simple_string_with_newline():
     with pytest.raises(RESPError):
         assert serialize(SimpleString("a\nb"))
 
+
 def test_error_reply_with_cr():
     with pytest.raises(RESPError):
         assert serialize(ErrorReply("x\ry"))
+
 
 def test_unsupported_type():
     with pytest.raises(RESPError):
         assert serialize({})
 
 
-#Group 5: Equivalence
+# Group 5: Equivalence
 def test_equal():
     assert serialize("hi") == serialize(b"hi")
 
+
 # INCOMPLETE
+
 
 def test_incomplete_repr():
     assert repr(INCOMPLETE) == "INCOMPLETE"
@@ -97,6 +112,7 @@ def test_incomplete_is_not_none():
 
 
 # _read_line
+
 
 def test_read_line_found():
     assert _read_line(b"+OK\r\n", 1) == (b"OK", 5)
@@ -131,6 +147,7 @@ def test_read_line_finished_line_too_long():
 
 # _parse_int
 
+
 def test_parse_int_positive():
     assert _parse_int(b"5") == 5
 
@@ -156,6 +173,7 @@ def test_parse_int_rejects_bad_input():
 
 # Simple String
 
+
 def test_parse_simple_string():
     assert parse(b"+OK\r\n") == (SimpleString("OK"), 5)
 
@@ -175,6 +193,7 @@ def test_parse_simple_string_invalid_utf8():
 
 # Error reply
 
+
 def test_parse_error_reply():
     assert parse(b"-ERR bad\r\n") == (ErrorReply("ERR bad"), 10)
 
@@ -193,6 +212,7 @@ def test_parse_error_reply_invalid_utf8():
 
 
 # Integer
+
 
 def test_parse_integer():
     assert parse(b":42\r\n") == (42, 5)
@@ -222,6 +242,7 @@ def test_parse_integer_empty():
 
 # Bulk String
 
+
 def test_parse_bulk_string():
     assert parse(b"$2\r\nhi\r\n") == (b"hi", 8)
 
@@ -239,8 +260,8 @@ def test_parse_bulk_string_with_crlf_inside():
 
 
 def test_parse_bulk_string_stays_bytes():
-    value, _ = parse("$12\r\nпривет\r\n".encode("utf-8"))
-    assert value == "привет".encode("utf-8")
+    value, _ = parse("$12\r\nпривет\r\n".encode())
+    assert value == "привет".encode()
     assert isinstance(value, bytes)
 
 
@@ -283,6 +304,7 @@ def test_parse_bulk_string_invalid_length():
 
 
 # Array
+
 
 def test_parse_empty_array():
     assert parse(b"*0\r\n") == ([], 4)
@@ -347,9 +369,10 @@ def test_parse_array_with_malformed_element():
 
 # Nesting depth
 
+
 def test_parse_nesting_at_limit():
     msg = b"*1\r\n" * 32 + b":1\r\n"
-    value, pos = parse(msg)
+    _value, pos = parse(msg)
     assert pos == len(msg)
 
 
@@ -366,6 +389,7 @@ def test_parse_very_deep_nesting_does_not_crash():
 
 
 # Dispatcher / Parser
+
 
 def test_parse_empty_buffer():
     assert parse(b"") is INCOMPLETE
@@ -434,7 +458,7 @@ def test_round_trip_values():
 
 def test_round_trip_str_comes_back_as_bytes():
     encoded = serialize("привет")
-    assert parse(encoded) == ("привет".encode("utf-8"), len(encoded))
+    assert parse(encoded) == ("привет".encode(), len(encoded))
 
 
 # Prefix test
