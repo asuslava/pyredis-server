@@ -1,5 +1,8 @@
 import argparse
 import asyncio
+import os
+
+from pyredis.persistence import AOFManager
 from pyredis.server import RedisServer
 
 def main() -> None:
@@ -12,7 +15,10 @@ def main() -> None:
     parser.add_argument("--dir", default=".", help="directory for the AOF file")
     args = parser.parse_args()
 
-    server = RedisServer(host=args.host, port=args.port)
+    aof_path = os.path.join(args.dir, "appendonly.aof")
+    aof = AOFManager(aof_path)
+
+    server = RedisServer(host=args.host, port=args.port, aof=aof)
     print(f"PyRedis running on {args.host}:{args.port}")
 
     print(f"pyredis would start on {args.host}:{args.port}, data dir: {args.dir}")

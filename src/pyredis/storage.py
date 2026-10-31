@@ -1,3 +1,4 @@
+import random
 import time
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -49,8 +50,8 @@ class Database:
 
         return entry.value
 
-    def set(self, key: bytes, value : Any, value_type: ValueType):
-        self._entries[key] = Entry(value, value_type)
+    def set(self, key: bytes, value : Any, value_type: ValueType, expiry: float | None = None):
+        self._entries[key] = Entry(value, value_type, expiry)
 
     def get_or_create(self, key: bytes, expected_type: ValueType, factory: Callable[[], Any]) -> Any:
         value = self.get(key, expected_type)
@@ -117,3 +118,22 @@ class Database:
 
     def now(self) -> float:
         return self._clock()
+
+    def active_expire_cycle(self, sample_size: int = 20) -> tuple[int, int]:
+        expiring_keys = [
+            key for key, entry in self._entries.items()
+            if entry.expiry is not None
+        ]
+
+        if not expiring_keys:
+            return (0, 0)
+
+        num_to_sample = min(len(expiring_keys), sample_size)
+        sample_keys = random.sample(expiring_keys, num_to_sample)
+
+        expired_count = 0
+        for key in sample_keys:
+            if self._live_entry(key) is None:
+                expired_count += 1
+
+        return (len(sample_keys), expired_count)

@@ -74,7 +74,7 @@ def cmd_sismember(db: Database, args: list[bytes]) -> int | ErrorReply:
 
 def cmd_scard(db: Database, args: list[bytes]) -> int | ErrorReply:
     if len(args) != 1:
-        return ErrorReply("ERR wrong number of arguments for 'sismember' command")
+        return ErrorReply("ERR wrong number of arguments for 'scard' command")
 
     try:
         items = db.get(key=args[0], expected_type=ValueType.SET)
