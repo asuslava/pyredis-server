@@ -127,7 +127,9 @@ def _parse_int(line: bytes) -> int:
     return -value if negative else value
 
 
-def _parse_simple_string(buffer: bytes, pos: int, depth: int) -> ParseResult | Incomplete:
+def _parse_simple_string(
+    buffer: bytes, pos: int, depth: int
+) -> ParseResult | Incomplete:
     result = _read_line(buffer, pos)
 
     if isinstance(result, Incomplete):
