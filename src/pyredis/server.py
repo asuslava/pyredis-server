@@ -6,7 +6,13 @@ from pyredis.commands.transactions import cmd_discard, cmd_exec, cmd_multi
 from pyredis.context import ClientContext
 from pyredis.expiration import active_expiration_loop
 from pyredis.persistence import AOFManager
-from pyredis.protocol import INCOMPLETE, ErrorReply, SimpleString, parse, serialize
+from pyredis.protocol import (
+    ErrorReply,
+    Incomplete,
+    SimpleString,
+    parse,
+    serialize,
+)
 from pyredis.pubsub import PubSubHub
 from pyredis.storage import Database
 
@@ -59,7 +65,7 @@ class RedisServer:
 
                 while True:
                     result = parse(bytes(buffer), 0)
-                    if result is INCOMPLETE:
+                    if isinstance(result, Incomplete):
                         break
                     value, new_pos = result
                     del buffer[:new_pos]

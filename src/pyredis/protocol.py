@@ -127,10 +127,10 @@ def _parse_int(line: bytes) -> int:
     return -value if negative else value
 
 
-def _parse_simple_string(buffer: bytes, pos: int, depth: int) -> ParseResult:
+def _parse_simple_string(buffer: bytes, pos: int, depth: int) -> ParseResult | Incomplete:
     result = _read_line(buffer, pos)
 
-    if result is INCOMPLETE:
+    if isinstance(result, Incomplete):
         return INCOMPLETE
 
     line, new_pos = result
@@ -143,10 +143,10 @@ def _parse_simple_string(buffer: bytes, pos: int, depth: int) -> ParseResult:
     return (SimpleString(text), new_pos)
 
 
-def _parse_error(buffer: bytes, pos: int, depth: int) -> ParseResult:
+def _parse_error(buffer: bytes, pos: int, depth: int) -> ParseResult | Incomplete:
     result = _read_line(buffer, pos)
 
-    if result is INCOMPLETE:
+    if isinstance(result, Incomplete):
         return INCOMPLETE
 
     line, new_pos = result
@@ -159,10 +159,10 @@ def _parse_error(buffer: bytes, pos: int, depth: int) -> ParseResult:
     return (ErrorReply(text), new_pos)
 
 
-def _parse_integer(buffer: bytes, pos: int, depth: int) -> ParseResult:
+def _parse_integer(buffer: bytes, pos: int, depth: int) -> ParseResult | Incomplete:
     result = _read_line(buffer, pos)
 
-    if result is INCOMPLETE:
+    if isinstance(result, Incomplete):
         return INCOMPLETE
 
     line, new_pos = result
@@ -171,10 +171,10 @@ def _parse_integer(buffer: bytes, pos: int, depth: int) -> ParseResult:
     return (value, new_pos)
 
 
-def _parse_bulk_string(buffer: bytes, pos: int, depth: int) -> ParseResult:
+def _parse_bulk_string(buffer: bytes, pos: int, depth: int) -> ParseResult | Incomplete:
     result = _read_line(buffer, pos)
 
-    if result is INCOMPLETE:
+    if isinstance(result, Incomplete):
         return INCOMPLETE
 
     line, new_pos = result
@@ -195,10 +195,10 @@ def _parse_bulk_string(buffer: bytes, pos: int, depth: int) -> ParseResult:
     return (buffer[new_pos:end], end + 2)
 
 
-def _parse_array(buffer: bytes, pos: int, depth: int) -> ParseResult:
+def _parse_array(buffer: bytes, pos: int, depth: int) -> ParseResult | Incomplete:
     result = _read_line(buffer, pos)
 
-    if result is INCOMPLETE:
+    if isinstance(result, Incomplete):
         return INCOMPLETE
 
     line, new_pos = result
@@ -214,7 +214,7 @@ def _parse_array(buffer: bytes, pos: int, depth: int) -> ParseResult:
 
     for _ in range(count):
         element = _parse_value(buffer, cur, depth + 1)
-        if element is INCOMPLETE:
+        if isinstance(element, Incomplete):
             return INCOMPLETE
 
         item, cur = element
@@ -223,8 +223,7 @@ def _parse_array(buffer: bytes, pos: int, depth: int) -> ParseResult:
     return (items, cur)
 
 
-# Dispatcher
-def _parse_value(buffer: bytes, pos: int, depth: int) -> ParseResult:
+def _parse_value(buffer: bytes, pos: int, depth: int) -> ParseResult | Incomplete:
     if depth > MAX_NESTING_DEPTH:
         raise ProtocolError(f"Nesting depth {depth} exceeds MAX_NESTING_DEPTH")
 
@@ -247,5 +246,4 @@ def _parse_value(buffer: bytes, pos: int, depth: int) -> ParseResult:
 
 
 def parse(buffer: bytes, pos: int = 0) -> ParseResult:
-    """Returns (value, new_pos) or INCOMPLETE, raises ProtocolError"""
     return _parse_value(buffer, pos, 0)

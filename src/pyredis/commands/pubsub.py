@@ -1,4 +1,5 @@
 import asyncio
+from typing import Any
 
 from pyredis.protocol import ErrorReply
 from pyredis.pubsub import PubSubHub
@@ -14,7 +15,7 @@ def cmd_publish(hub: PubSubHub, args: list[bytes]) -> int | ErrorReply:
 
 def cmd_subscribe(
     hub: PubSubHub, writer: asyncio.StreamWriter, args: list[bytes]
-) -> list[bytes] | ErrorReply:
+) -> list[list[Any]] | ErrorReply:
     if len(args) < 1:
         return ErrorReply("ERR wrong number of arguments for 'subscribe' command")
 
@@ -28,7 +29,7 @@ def cmd_subscribe(
 
 def cmd_unsubscribe(
     hub: PubSubHub, writer: asyncio.StreamWriter, args: list[bytes]
-) -> list[bytes] | ErrorReply:
+) -> list[list[Any]]:
     channels = (
         list(args) if len(args) > 0 else list(hub._subscribers.get(writer, set()))
     )

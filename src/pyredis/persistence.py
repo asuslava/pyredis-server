@@ -1,7 +1,7 @@
 from pathlib import Path
 
 from pyredis.commands import execute_command
-from pyredis.protocol import INCOMPLETE, parse, serialize
+from pyredis.protocol import Incomplete, parse, serialize
 from pyredis.storage import Database
 
 WRITE_COMMANDS = {
@@ -44,7 +44,7 @@ class AOFManager:
         replayed_count = 0
         while pos < len(data):
             result = parse(data, pos)
-            if result is INCOMPLETE:
+            if isinstance(result, Incomplete):
                 break
 
             value, pos = result

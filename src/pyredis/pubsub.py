@@ -5,7 +5,7 @@ from pyredis.protocol import serialize
 
 
 class PubSubHub:
-    def __init__(self):
+    def __init__(self) -> None:
         self._channels: dict[bytes, set[asyncio.StreamWriter]] = defaultdict(set)
         self._subscribers: dict[asyncio.StreamWriter, set[bytes]] = defaultdict(set)
 
@@ -23,7 +23,7 @@ class PubSubHub:
 
         if writer in self._subscribers:
             self._subscribers[writer].discard(channel)
-            if len(self._subscribers) == 0:
+            if len(self._subscribers[writer]) == 0:
                 del self._subscribers[writer]
 
         return len(self._subscribers[writer])
@@ -36,7 +36,6 @@ class PubSubHub:
                 count = len(self._channels[channel])
                 if count == 0:
                     del self._channels[channel]
-                return count
 
     def publish(self, channel: bytes, message: bytes) -> int:
         writers = self._channels.get(channel, set())

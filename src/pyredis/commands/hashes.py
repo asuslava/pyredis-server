@@ -26,7 +26,7 @@ def cmd_hset(db: Database, args: list[bytes]) -> int | ErrorReply:
     return added_count
 
 
-def cmd_hget(db: Database, args: list[bytes]) -> bytes | ErrorReply:
+def cmd_hget(db: Database, args: list[bytes]) -> bytes | ErrorReply | None:
     if len(args) != 2:
         return ErrorReply("ERR wrong number of arguments for 'hget' command")
 

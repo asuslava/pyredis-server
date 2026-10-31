@@ -35,6 +35,9 @@ def cmd_ttl(db: Database, args: list[bytes]) -> int | ErrorReply:
         return ErrorReply("ERR wrong number of arguments for 'ttl' command")
     if not db.exists(args[0]):
         return -2
-    if db.get_expiry(args[0]) is None:
+
+    exp = db.get_expiry(args[0])
+    if exp is None:
         return -1
-    return max(0, int(db.get_expiry(args[0]) - db.now()))
+
+    return max(0, int(exp - db.now()))
